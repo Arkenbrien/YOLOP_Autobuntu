@@ -174,6 +174,7 @@ if __name__ == '__main__':
     parser.add_argument('--save-dir', type=str, default='inference/output', help='directory to save results')
     parser.add_argument('--augment', action='store_true', help='augmented inference')
     parser.add_argument('--update', action='store_true', help='update all models')
+    print(torch.cuda.is_available())
     opt = parser.parse_args()
     with torch.no_grad():
         detect(cfg,opt)

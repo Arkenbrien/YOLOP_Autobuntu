@@ -54,6 +54,7 @@ def show_seg_result(img, result, index, epoch, save_dir=None, is_ll=False,palett
     color_seg = color_seg[..., ::-1]
     # print(color_seg.shape)
     color_mask = np.mean(color_seg, 2)
+    img = cv2.resize(img, (np.shape(color_mask)[1],np.shape(color_mask)[0]), interpolation=cv2.INTER_LINEAR)
     img[color_mask != 0] = img[color_mask != 0] * 0.5 + color_seg[color_mask != 0] * 0.5
     # img = img * 0.5 + color_seg * 0.5
     img = img.astype(np.uint8)
