@@ -4,6 +4,8 @@ import torch.nn as nn
 import sys,os
 import math
 import sys
+import numpy as np
+
 sys.path.append(os.getcwd())
 #sys.path.append("lib/models")
 #sys.path.append("lib/utils")
@@ -570,8 +572,8 @@ class MCnet(nn.Module):
         m = self.model[self.detector_index]  # Detect() module
         for mi, s in zip(m.m, m.stride):  # from
             b = mi.bias.view(m.na, -1)  # conv.bias(255) to (3,85)
-            b.data[:, 4] += math.log(8 / (640 / s) ** 2)  # obj (8 objects per 640 image)
-            b.data[:, 5:] += math.log(0.6 / (m.nc - 0.99)) if cf is None else torch.log(cf / cf.sum())  # cls
+            b.data[:, 4] += np.log(8 / (640 / s) ** 2)  # obj (8 objects per 640 image)
+            b.data[:, 5:] += np.log(0.6 / (m.nc - 0.99)) if cf is None else torch.log(cf / cf.sum())  # cls
             mi.bias = torch.nn.Parameter(b.view(-1), requires_grad=True)
 
 def get_net(cfg, **kwargs): 

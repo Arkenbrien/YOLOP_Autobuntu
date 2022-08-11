@@ -247,7 +247,7 @@ class AutoDriveDataset(Dataset):
         Returns:
         -db_selected: (list)filtered dataset
         """
-        db_selected = ...
+        db_selected = db
         return db_selected
 
     @staticmethod

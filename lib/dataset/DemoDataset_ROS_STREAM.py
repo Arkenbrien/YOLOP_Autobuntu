@@ -23,9 +23,11 @@ import rospy
 import cv2
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
-from cv_bridge import CvBridge, CvBridgeError
+# from cv_bridge import CvBridge, CvBridgeError
 import time
 import warnings
+
+import future
 
 from ..utils import letterbox_for_img, clean_str
 
@@ -86,7 +88,7 @@ class LoadImages:  # for inference
             h0, w0 = img0.shape[:2]
 
             self.frame += 1
-            print('\n video %g/%g (%g/%g) %s: ' % (self.count + 1, self.nf, self.frame, self.nframes, path), end='')
+            # print('\n video %g/%g (%g/%g) %s: ' % (self.count + 1, self.nf, self.frame, self.nframes, path), end='')
 
         else:
             # Read image
@@ -94,7 +96,7 @@ class LoadImages:  # for inference
             img0 = cv2.imread(path, cv2.IMREAD_COLOR | cv2.IMREAD_IGNORE_ORIENTATION)  # BGR
             #img0 = cv2.cvtColor(img0, cv2.COLOR_BGR2RGB)
             assert img0 is not None, 'Image Not Found ' + path
-            print('image %g/%g %s: \n' % (self.count, self.nf, path), end='')
+            # print('image %g/%g %s: \n' % (self.count, self.nf, path), end='')
             h0, w0 = img0.shape[:2]
 
         # Padded resize
@@ -146,7 +148,7 @@ class LoadStreams:
 
         if self.mode == 'ros':
 
-            topic = '/camera_fr/image_raw'
+            topic = '/usb_cam/image_raw'
 
             # Do something
             print("Attempting ROS integration")
@@ -155,7 +157,7 @@ class LoadStreams:
             print("Using this topic: ")
             print(topic)
 
-            self.bridge = CvBridge()
+            # self.bridge = CvBridge()
             self.image_sub = rospy.Subscriber(topic, Image, self.callback)
             rospy.spin()
 
@@ -192,10 +194,10 @@ class LoadStreams:
             
             for i, s in enumerate(sources):  # index, source
                 # Start thread to read frames from video stream
-                print(f'{i + 1}/{n}: {s}... ', end='')
+                # print(f'{i + 1}/{n}: {s}... ', end='')
                 s = eval(s) if s.isnumeric() else s  # i.e. s = '0' local webcam
                 cap = cv2.VideoCapture(s)
-                assert cap.isOpened(), f'Failed to open {s}'
+                # assert cap.isOpened(), f'Failed to open {s}'
                 w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
                 h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
                 self.fps[i] = max(cap.get(cv2.CAP_PROP_FPS) % 100, 0) or 30.0  # 30 FPS fallback
@@ -203,7 +205,7 @@ class LoadStreams:
 
                 _, self.imgs[i] = cap.read()  # guarantee first frame
                 self.threads[i] = Thread(target=self.update, args=([i, cap]), daemon=True)
-                print(f" success ({self.frames[i]} frames {w}x{h} at {self.fps[i]:.2f} FPS)")
+                # print(f" success ({self.frames[i]} frames {w}x{h} at {self.fps[i]:.2f} FPS)")
                 self.threads[i].start()
             print('')  # newline
 
@@ -218,44 +220,48 @@ class LoadStreams:
 
         print("class_callback def reached")
 
-        try:
+        # try:
 
-            self.cv_image = self.bridge.imgmsg_to_cv2(data,desired_encoding= "bgr8")
-            self.yolo_img = cv2.cvtColor(self.cv_image,cv2.COLOR_BGR2RGB)
-            cv2.imshow('wtf', self.cv_image)
-            cv2.waitKey(0)
+        # self.cv_image = self.bridge.imgmsg_to_cv2(data,desired_encoding= "bgr8")
+        self.cv_image  = np.frombuffer(data.data, dtype=np.uint8).reshape(data.height, data.width, -1)
 
-            for i, s in enumerate(0): # index, source
-                # Start thread to read frames from RsourcesOS stream
-                
-                print(f'{i + 1}/{n}: {s}... ', end='')
+        # self.cv_image = cv2.cvtColor(self.cv_image, cv2.COLOR_RGB2GRAY)
+        self.yolo_img = cv2.cvtColor(self.cv_image,cv2.COLOR_BGR2RGB)
 
-                # cap = self.bridge.imgmsg_to_cv2(topic, desired_encoding="bgr8")
-                cap = self.cv_image 
-                # cap = self.cv_image
+        cv2.imshow('wtf', self.yolo_img)
+        cv2.waitKey(0)
 
-                print("\n=====")
-                print("cap:  ")
-                print(cap)
-                print("=====")
+        for i, s in enumerate(0): # index, source
+            # Start thread to read frames from RsourcesOS stream
+            
+            # print(f'{i + 1}/{n}: {s}... ', end='')
 
-                assert cap.isOpened(), f'Failed to open {s}'
-                w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-                h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                
-                self.fps[i] = 30.0
-                self.frames = float('inf')
+            # cap = self.bridge.imgmsg_to_cv2(topic, desired_encoding="bgr8")
+            cap = self.cv_image 
+            # cap = self.cv_image
 
-                _, self.imgs[i] = cap.read()  # guarantee first frame
-                self.threads[i] = Thread(target=self.update, args=([i, cap]), daemon=True)
-                print(f" success ({self.frames[i]} frames {w}x{h} at {self.fps[i]:.2f} FPS)")
-                self.threads[i].start()
+            print("\n=====")
+            print("cap:  ")
+            print(cap)
+            print("=====")
+
+            # assert cap.isOpened(), f'Failed to open {s}'
+            w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            
+            self.fps[i] = 30.0
+            self.frames = float('inf')
+
+            _, self.imgs[i] = cap.read()  # guarantee first frame
+            self.threads[i] = Thread(target=self.update, args=([i, cap]), daemon=True)
+            # print(f" success ({self.frames[i]} frames {w}x{h} at {self.fps[i]:.2f} FPS)")
+            self.threads[i].start()
 
             # self.image_pub_opencv.publish(self.bridge.cv2_to_imgmsg(self.yolo_img, "bgr8"))
             # self.image_pub.publish(self.bridge.cv2_to_imgmsg(self.cv_image, "bgr8"))
 
-        except CvBridgeError as e:
-            print(e)
+        # except CvBridgeError as e:
+        #     print(e)
 
 
 
