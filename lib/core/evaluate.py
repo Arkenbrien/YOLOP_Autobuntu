@@ -175,9 +175,9 @@ class ConfusionMatrix:
         except Exception as e:
             pass
 
-    def print(self):
-        for i in range(self.nc + 1):
-            print(' '.join(map(str, self.matrix[i])))
+    # def print(self):
+    #     for i in range(self.nc + 1):
+    #         print(' '.join(map(str, self.matrix[i])))
 
 class SegmentationMetric(object):
     '''
@@ -265,7 +265,7 @@ def plot_pr_curve(px, py, ap, save_dir='.', names=()):
 
     if 0 < len(names) < 21:  # show mAP in legend if < 10 classes
         for i, y in enumerate(py.T):
-            ax.plot(px, y, linewidth=1, label=f'{names[i]} %.3f' % ap[i, 0])  # plot(recall, precision)
+            ax.plot(px, y, linewidth=1, label=str(names[i]))  # plot(recall, precision)
     else:
         ax.plot(px, py, linewidth=1, color='grey')  # plot(recall, precision)
 

@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import argparse
 import os, sys
 import shutil
@@ -28,6 +30,9 @@ from lib.utils import plot_one_box,show_seg_result
 from lib.core.function import AverageMeter
 from lib.core.postprocess import morphological_process, connect_lane
 from tqdm import tqdm
+
+import rospy
+
 normalize = transforms.Normalize(
         mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
     )
@@ -44,9 +49,9 @@ def detect(cfg,opt):
         cfg, cfg.LOG_DIR, 'demo')
 
     device = select_device(logger,opt.device)
-    if os.path.exists(opt.save_dir):  # output dir
-        shutil.rmtree(opt.save_dir)  # delete dir
-    os.makedirs(opt.save_dir)  # make new dir
+    
+    if not os.path.exists(opt.save_dir):  # output dir
+        os.makedirs(opt.save_dir)  # make new dir
     half = device.type != 'cpu'  # half precision only supported on CUDA
 
     # Load model
@@ -58,19 +63,15 @@ def detect(cfg,opt):
         model.half()  # to FP16
 
     # Set Dataloader
-    if opt.source.isnumeric():
-        cudnn.benchmark = True  # set True to speed up constant image size inference
-        dataset = LoadStreams(opt.source, img_size=opt.img_size)
-        bs = len(dataset)  # batch_size
-    else:
-        dataset = LoadImages(opt.source, img_size=opt.img_size)
-        bs = 1  # batch_size
 
+    cudnn.benchmark = True  # set True to speed up constant image size inference
+    dataset = LoadStreams(opt)
+
+    # bs = len(dataset)  # batch_size
 
     # Get names and colors
     names = model.module.names if hasattr(model, 'module') else model.names
     colors = [[random.randint(0, 255) for _ in range(3)] for _ in range(len(names))]
-
 
     # Run inference
     t0 = time.time()
@@ -106,7 +107,7 @@ def detect(cfg,opt):
         det=det_pred[0]
 
         save_path = str(opt.save_dir +'/'+ Path(path).name) if dataset.mode != 'stream' else str(opt.save_dir + '/' + "web.mp4")
-
+        
         _, _, height, width = img.shape
         h,w,_=img_det.shape
         pad_w, pad_h = shapes[1][1]
@@ -131,11 +132,11 @@ def detect(cfg,opt):
 
         img_det = show_seg_result(img_det, (da_seg_mask, ll_seg_mask), _, _, is_demo=True)
 
-        if len(det):
-            det[:,:4] = scale_coords(img.shape[2:],det[:,:4],img_det.shape).round()
-            for *xyxy,conf,cls in reversed(det):
-                label_det_pred = f'{names[int(cls)]} {conf:.2f}'
-                plot_one_box(xyxy, img_det , label=label_det_pred, color=colors[int(cls)], line_thickness=2)
+        # if len(det):
+        #     det[:,:4] = scale_coords(img.shape[2:],det[:,:4],img_det.shape).round()
+        #     for *xyxy,conf,cls in reversed(det):
+        #         label_det_pred = f'{names[int(cls)]} {conf:.2f}'
+        #         plot_one_box(xyxy, img_det , label=label_det_pred, color=colors[int(cls)], line_thickness=2)
         
         if dataset.mode == 'images':
             cv2.imwrite(save_path,img_det)
@@ -155,12 +156,12 @@ def detect(cfg,opt):
         else:
             cv2.imshow('image', img_det)
             cv2.waitKey(1)  # 1 millisecond
+            
+            
 
     print('Results saved to %s' % Path(opt.save_dir))
     print('Done. (%.3fs)' % (time.time() - t0))
     print('inf : (%.4fs/frame)   nms : (%.4fs/frame)' % (inf_time.avg,nms_time.avg))
-
-
 
 
 if __name__ == '__main__':
@@ -170,10 +171,17 @@ if __name__ == '__main__':
     parser.add_argument('--img-size', type=int, default=640, help='inference size (pixels)')
     parser.add_argument('--conf-thres', type=float, default=0.25, help='object confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.45, help='IOU threshold for NMS')
-    parser.add_argument('--device', default='cpu', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
+    parser.add_argument('--device', default='gpu', help='cuda device, i.e. 0 or 0,1,2,3 or cpu')
     parser.add_argument('--save-dir', type=str, default='inference/output', help='directory to save results')
     parser.add_argument('--augment', action='store_true', help='augmented inference')
     parser.add_argument('--update', action='store_true', help='update all models')
+    # print(torch.cuda.is_available())
     opt = parser.parse_args()
+
+    print("=====")
+    print("Printing --source")
+    print(opt.source)
+    print("=====")
+    
     with torch.no_grad():
         detect(cfg,opt)

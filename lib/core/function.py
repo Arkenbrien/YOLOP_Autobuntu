@@ -14,7 +14,8 @@ import random
 import cv2
 import os
 import math
-from torch.cuda import amp
+# from torch.cuda import amp
+from apex import amp
 from tqdm import tqdm
 
 
@@ -296,10 +297,10 @@ def validate(epoch,config, val_loader, val_dataset, model, criterion, output_dir
                         det = output[i].clone()
                         if len(det):
                             det[:,:4] = scale_coords(img[i].shape[1:],det[:,:4],img_det.shape).round()
-                        for *xyxy,conf,cls in reversed(det):
+                        for xyxy,conf,cls in reversed(det):
                             #print(cls)
-                            label_det_pred = f'{names[int(cls)]} {conf:.2f}'
-                            plot_one_box(xyxy, img_det , label=label_det_pred, color=colors[int(cls)], line_thickness=3)
+                            # label_det_pred = f'{names[int(cls)]} {conf:.2f}'
+                            plot_one_box(xyxy, img_det , label='fix', color=colors[int(cls)], line_thickness=3)
                         cv2.imwrite(save_dir+"/batch_{}_{}_det_pred.png".format(epoch,i),img_det)
 
                         labels = target[0][target[0][:, 0] == i, 1:]
@@ -310,7 +311,8 @@ def validate(epoch,config, val_loader, val_dataset, model, criterion, output_dir
                         for cls,x1,y1,x2,y2 in labels:
                             #print(names)
                             #print(cls)
-                            label_det_gt = f'{names[int(cls)]}'
+                            # label_det_gt = f'{names[int(cls)]}'
+                            label_det_gt = str(names[int(cls)])
                             xyxy = (x1,y1,x2,y2)
                             plot_one_box(xyxy, img_gt , label=label_det_gt, color=colors[int(cls)], line_thickness=3)
                         cv2.imwrite(save_dir+"/batch_{}_{}_det_gt.png".format(epoch,i),img_gt)
@@ -337,9 +339,9 @@ def validate(epoch,config, val_loader, val_dataset, model, criterion, output_dir
             # Append to text file
             if config.TEST.SAVE_TXT:
                 gn = torch.tensor(shapes[si][0])[[1, 0, 1, 0]]  # normalization gain whwh
-                for *xyxy, conf, cls in predn.tolist():
+                for xyxy, conf, cls in predn.tolist():
                     xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
-                    line = (cls, *xywh, conf) if save_conf else (cls, *xywh)  # label format
+                    line = (cls, xywh, conf) if save_conf else (cls, xywh)  # label format
                     with open(save_dir / 'labels' / (path.stem + '.txt'), 'a') as f:
                         f.write(('%g ' * len(line)).rstrip() % line + '\n')
 
@@ -349,7 +351,7 @@ def validate(epoch,config, val_loader, val_dataset, model, criterion, output_dir
                              "class_id": int(cls),
                              "box_caption": "%s %.3f" % (names[cls], conf),
                              "scores": {"class_score": conf},
-                             "domain": "pixel"} for *xyxy, conf, cls in pred.tolist()]
+                             "domain": "pixel"} for xyxy, conf, cls in pred.tolist()]
                 boxes = {"predictions": {"box_data": box_data, "class_labels": names}}  # inference-space
                 wandb_images.append(wandb.Image(img[si], boxes=boxes, caption=path.name))
 
@@ -402,10 +404,10 @@ def validate(epoch,config, val_loader, val_dataset, model, criterion, output_dir
             # Append statistics (correct, conf, pcls, tcls)
             stats.append((correct.cpu(), pred[:, 4].cpu(), pred[:, 5].cpu(), tcls))
 
-        if config.TEST.PLOTS and batch_i < 3:
-            f = save_dir +'/'+ f'test_batch{batch_i}_labels.jpg'  # labels
+        # if config.TEST.PLOTS and batch_i < 3:
+            # f = save_dir +'/'+ f'test_batch{batch_i}_labels.jpg'  # labels
             #Thread(target=plot_images, args=(img, target[0], paths, f, names), daemon=True).start()
-            f = save_dir +'/'+ f'test_batch{batch_i}_pred.jpg'  # predictions
+            # f = save_dir +'/'+ f'test_batch{batch_i}_pred.jpg'  # predictions
             #Thread(target=plot_images, args=(img, output_to_target(output), paths, f, names), daemon=True).start()
 
     # Compute statistics
@@ -449,7 +451,7 @@ def validate(epoch,config, val_loader, val_dataset, model, criterion, output_dir
     if config.TEST.SAVE_JSON and len(jdict):
         w = Path(weights[0] if isinstance(weights, list) else weights).stem if weights is not None else ''  # weights
         anno_json = '../coco/annotations/instances_val2017.json'  # annotations json
-        pred_json = str(save_dir / f"{w}_predictions.json")  # predictions json
+        pred_json = str(save_dir / str(w)+"predictions.json")  # predictions json
         print('\nEvaluating pycocotools mAP... saving %s...' % pred_json)
         with open(pred_json, 'w') as f:
             json.dump(jdict, f)
@@ -468,12 +470,12 @@ def validate(epoch,config, val_loader, val_dataset, model, criterion, output_dir
             eval.summarize()
             map, map50 = eval.stats[:2]  # update results (mAP@0.5:0.95, mAP@0.5)
         except Exception as e:
-            print(f'pycocotools unable to run: {e}')
+            print('pycocotools unable to run',e)
 
     # Return results
-    if not training:
-        s = f"\n{len(list(save_dir.glob('labels/*.txt')))} labels saved to {save_dir / 'labels'}" if config.TEST.SAVE_TXT else ''
-        print(f"Results saved to {save_dir}{s}")
+    # if not training:
+    #     s = f"\n{len(list(save_dir.glob('labels/*.txt')))} labels saved to {save_dir / 'labels'}" if config.TEST.SAVE_TXT else ''
+    #     print(f"Results saved to {save_dir}{s}")
     model.float()  # for training
     maps = np.zeros(nc) + map
     for i, c in enumerate(ap_class):

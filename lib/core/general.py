@@ -179,7 +179,7 @@ def non_max_suppression(prediction, conf_thres=0.25, iou_thres=0.45, classes=Non
 
         output[xi] = x[i]
         if (time.time() - t) > time_limit:
-            print(f'WARNING: NMS time limit {time_limit}s exceeded')
+            print('WARNING: NMS time limit'+str(time_limit)+'s exceeded')
             break  # time limit exceeded
 
     return output
@@ -443,8 +443,8 @@ def output_to_target(output):
     # Convert model output to target format [batch_id, class_id, x, y, w, h, conf]
     targets = []
     for i, o in enumerate(output):
-        for *box, conf, cls in o.cpu().numpy():
-            targets.append([i, cls, *list(*xyxy2xywh(np.array(box)[None])), conf])
+        for box, conf, cls in o.cpu().numpy():
+            targets.append([i, cls, list(xyxy2xywh(np.array(box)[None])), conf])
     return np.array(targets)
 
 def plot_pr_curve(px, py, ap, save_dir='.', names=()):
@@ -453,7 +453,7 @@ def plot_pr_curve(px, py, ap, save_dir='.', names=()):
 
     if 0 < len(names) < 21:  # show mAP in legend if < 10 classes
         for i, y in enumerate(py.T):
-            ax.plot(px, y, linewidth=1, label=f'{names[i]} %.3f' % ap[i, 0])  # plot(recall, precision)
+            ax.plot(px, y, linewidth=1, label=str(names[i]))  # plot(recall, precision)
     else:
         ax.plot(px, py, linewidth=1, color='grey')  # plot(recall, precision)
 

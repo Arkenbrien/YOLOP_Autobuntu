@@ -1,4 +1,3 @@
-## 处理pred结果的.json文件,画图
 import matplotlib.pyplot as plt
 import cv2
 import numpy as np
@@ -12,10 +11,10 @@ def plot_img_and_mask(img, mask, index,epoch,save_dir):
     ax[0].imshow(img)
     if classes > 1:
         for i in range(classes):
-            ax[i+1].set_title(f'Output mask (class {i+1})')
+            # ax[i+1].set_title(f'Output mask (class {i+1})')
             ax[i+1].imshow(mask[:, :, i])
     else:
-        ax[1].set_title(f'Output mask')
+        # ax[1].set_title(f'Output mask')
         ax[1].imshow(mask)
     plt.xticks([]), plt.yticks([])
     # plt.show()
@@ -54,7 +53,10 @@ def show_seg_result(img, result, index, epoch, save_dir=None, is_ll=False,palett
     color_seg = color_seg[..., ::-1]
     # print(color_seg.shape)
     color_mask = np.mean(color_seg, 2)
+
+    # Re-sizing the video to what is expected by YOLOP - Need to look into increasing the resolution itself
     img = cv2.resize(img, (np.shape(color_mask)[1],np.shape(color_mask)[0]), interpolation=cv2.INTER_LINEAR)
+    
     img[color_mask != 0] = img[color_mask != 0] * 0.5 + color_seg[color_mask != 0] * 0.5
     # img = img * 0.5 + color_seg * 0.5
     img = img.astype(np.uint8)

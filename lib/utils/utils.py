@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import os
 import logging
 import time
@@ -65,15 +67,15 @@ def select_device(logger=None, device='', batch_size=None):
         if ng > 1 and batch_size:  # check that batch_size is compatible with device_count
             assert batch_size % ng == 0, 'batch-size %g not multiple of GPU count %g' % (batch_size, ng)
         x = [torch.cuda.get_device_properties(i) for i in range(ng)]
-        s = f'Using torch {torch.__version__} '
+        # s = f'Using torch {torch.__version__} '
         for i in range(0, ng):
             if i == 1:
                 s = ' ' * len(s)
-            if logger:
-                logger.info("%sCUDA:%g (%s, %dMB)" % (s, i, x[i].name, x[i].total_memory / c))
-    else:
-        if logger:
-            logger.info(f'Using torch {torch.__version__} CPU')
+            # if logger:
+            #     logger.info("%sCUDA:%g (%s, %dMB)" % (s, i, x[i].name, x[i].total_memory / c))
+    # else:
+    #     if logger:
+    #         logger.info(f'Using torch {torch.__version__} CPU')
 
     if logger:
         logger.info('')  # skip a line
@@ -155,7 +157,7 @@ class DataLoaderX(DataLoader):
         return BackgroundGenerator(super().__iter__())
 
 @contextmanager
-def torch_distributed_zero_first(local_rank: int):
+def torch_distributed_zero_first(local_rank):
     """
     Decorator to make all processes in distributed training wait for each local_master to do something.
     """

@@ -15,7 +15,6 @@
 # python3 tools/demo.py --device gpu --source /home/autobuntu/Documents/YOLOP/inference/videos/1.mp4
 
 # Using the video collected with the Van (Autobuntu)
-# python3 tools/demo.py --img-size 640 --device gpu --source /home/autobuntu/Documents/YOLOP_Autobuntu/inference/videos/1.mp4 #--save-dir /home/autobuntu/Videos/YOLOP_OUTPUT
+python tools/demo_ROS.py --img-size 640 --device gpu --source 0 --save-dir /home/autobuntu/Videos/YOLOP_OUTPUT
 
-python3 tools/demo.py --img-size 640 --device gpu --source 0 #--save-dir /home/autobuntu/Videos/YOLOP_OUTPUT
 
