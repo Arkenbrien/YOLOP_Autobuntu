@@ -14,7 +14,7 @@ import random
 import cv2
 import os
 import math
-# from torch.cuda import amp
+from torch.cuda import amp
 # from apex import amp
 from tqdm import tqdm
 

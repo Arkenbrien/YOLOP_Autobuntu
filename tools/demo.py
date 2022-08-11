@@ -22,7 +22,7 @@ from lib.config import cfg
 from lib.config import update_config
 from lib.utils.utils import create_logger, select_device, time_synchronized
 from lib.models import get_net
-from lib.dataset import LoadImages, LoadStreams
+from lib.dataset.DemoDataset_orig_backup import LoadImages, LoadStreams
 from lib.core.general import non_max_suppression, scale_coords
 from lib.utils import plot_one_box,show_seg_result
 from lib.core.function import AverageMeter

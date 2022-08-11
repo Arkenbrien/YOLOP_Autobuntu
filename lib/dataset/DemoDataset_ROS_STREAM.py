@@ -125,7 +125,6 @@ class LoadImages:  # for inference
 class LoadStreams:  
 
     def __init__(self, opt, sources='streams.txt', img_size=640, auto=True):
-        rospy.init_node("image_load")
         self.img_size = img_size
         # self.cv_image = None
 
@@ -148,7 +147,8 @@ class LoadStreams:
 
         if self.mode == 'ros':
 
-            topic = '/usb_cam/image_raw'
+            # topic = '/usb_cam/image_raw'
+            topic = opt.rostopic
 
             # Do something
             print("Attempting ROS integration")
@@ -159,7 +159,9 @@ class LoadStreams:
 
             # self.bridge = CvBridge()
             self.image_sub = rospy.Subscriber(topic, Image, self.callback)
-            rospy.spin()
+            r = rospy.Rate(1000)
+            r.sleep()
+            # rospy.spin()
 
             # self.image_pub_opencv = rospy.Publisher(topic+'_bgr_opencv',Image, queue_size=1)
             # self.image_pub= rospy.Publisher(topic+'_rgb',Image, queue_size=1)
@@ -211,14 +213,10 @@ class LoadStreams:
 
         # check for common shapes
 
-        s = np.stack([letterbox_for_img(x, self.img_size, auto=self.auto)[0].shape for x in self.imgs], 0)  # shapes
-        self.rect = np.unique(s, axis=0).shape[0] == 1  # rect inference if all shapes equal
-        if not self.rect:
-            print('WARNING: Different stream shapes detected. For optimal performance supply similarly-shaped streams.')
 
     def callback(self,data):
 
-        print("class_callback def reached")
+        # print("class_callback def reached")
 
         # try:
 
@@ -226,12 +224,12 @@ class LoadStreams:
         self.cv_image  = np.frombuffer(data.data, dtype=np.uint8).reshape(data.height, data.width, -1)
 
         # self.cv_image = cv2.cvtColor(self.cv_image, cv2.COLOR_RGB2GRAY)
-        self.yolo_img = cv2.cvtColor(self.cv_image,cv2.COLOR_BGR2RGB)
+        self.cv_image = cv2.cvtColor(self.cv_image,cv2.COLOR_BGR2RGB)
 
-        cv2.imshow('wtf', self.yolo_img)
-        cv2.waitKey(0)
+        # cv2.imshow('wtf', self.cv_image)
+        # cv2.waitKey(0)
 
-        for i, s in enumerate(0): # index, source
+        for i, s in enumerate([0]): # index, source
             # Start thread to read frames from RsourcesOS stream
             
             # print(f'{i + 1}/{n}: {s}... ', end='')
@@ -240,20 +238,26 @@ class LoadStreams:
             cap = self.cv_image 
             # cap = self.cv_image
 
-            print("\n=====")
-            print("cap:  ")
-            print(cap)
-            print("=====")
+            # print("\n=====")
+            # print("cap:  ")
+            # print(cap)
+            # print("=====")
 
             # assert cap.isOpened(), f'Failed to open {s}'
-            w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-            h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            w = int(data.width)
+            h = int(data.height)
             
-            self.fps[i] = 30.0
-            self.frames = float('inf')
+            self.fps[i] = 30
+            self.frames[i] = 1
 
-            _, self.imgs[i] = cap.read()  # guarantee first frame
-            self.threads[i] = Thread(target=self.update, args=([i, cap]), daemon=True)
+            self.imgs[i] = cap # guarantee first frame
+
+            s = np.stack([letterbox_for_img(x, self.img_size, auto=self.auto)[0].shape for x in self.imgs], 0)  # shapes
+            self.rect = np.unique(s, axis=0).shape[0] == 1  # rect inference if all shapes equal
+            if not self.rect:
+                print('WARNING: Different stream shapes detected. For optimal performance supply similarly-shaped streams.')
+
+            self.threads[i] = Thread(target=self.update_ros, args=([i, cap]), daemon=True)
             # print(f" success ({self.frames[i]} frames {w}x{h} at {self.fps[i]:.2f} FPS)")
             self.threads[i].start()
 
@@ -265,16 +269,30 @@ class LoadStreams:
 
 
 
+    def update_ros(self, i, cap):
+        # Read stream `i` frames in daemon thread
+        n, f, read = 0, self.frames[i], 1  # frame number, frame array, inference every 'read' frame
+        while 1 and n < f:
+            n += 1
+            # _, self.imgs[index] = cap.read()
+            # cap.grab()
+            if n % read == 0:
+                # success, im = cap.retrieve()
+                self.imgs[i] = cap
+            # time.sleep(1 / self.fps[i])  # wait time
+        
+    
+
     def update(self, i, cap):
         # Read stream `i` frames in daemon thread
         n, f, read = 0, self.frames[i], 1  # frame number, frame array, inference every 'read' frame
-        while cap.isOpened() and n < f:
+        while 1 and n < f:
             n += 1
-            # _, self.imgs[index] = cap.read()
+            _, self.imgs[i] = cap.read()
             cap.grab()
             if n % read == 0:
                 success, im = cap.retrieve()
-                self.imgs[i] = im if success else self.imgs[i] * 0
+                self.imgs[i] = cap
             time.sleep(1 / self.fps[i])  # wait time
 
     def __iter__(self):
@@ -283,7 +301,7 @@ class LoadStreams:
 
     def __next__(self):
         self.count += 1
-        if not all(x.is_alive() for x in self.threads) or cv2.waitKey(1) == ord('q'):  # q to quit
+        if cv2.waitKey(1) == ord('q'):  # q to quit
             cv2.destroyAllWindows()
             raise StopIteration
 
